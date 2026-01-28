@@ -65,12 +65,19 @@
 import { Redis } from '@upstash/redis';
 import { Paste } from './types';
 
+// const PASTE_PREFIX = 'paste:';
 const PASTE_PREFIX = 'paste:';
 
-// Initialize Upstash Redis client with explicit env vars
+if (!process.env.UPSTASH_REDIS_REST_URL) {
+  throw new Error('Missing UPSTASH_REDIS_REST_URL');
+}
+if (!process.env.UPSTASH_REDIS_REST_TOKEN) {
+  throw new Error('Missing UPSTASH_REDIS_REST_TOKEN');
+}
+
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
 export async function savePaste(paste: Paste): Promise<void> {
@@ -114,11 +121,20 @@ export async function updatePaste(paste: Paste): Promise<void> {
   }
 }
 
+// export async function healthCheck(): Promise<boolean> {
+//   try {
+//     // Try a simple ping operation
+//     const result = await redis.ping();
+//     return result === 'PONG';
+//   } catch (error) {
+//     console.error('Redis health check failed:', error);
+//     return false;
+//   }
+// }
 export async function healthCheck(): Promise<boolean> {
   try {
-    // Try a simple ping operation
-    const result = await redis.ping();
-    return result === 'PONG';
+    await redis.set('__healthcheck', 'ok', { ex: 5 });
+    return true;
   } catch (error) {
     console.error('Redis health check failed:', error);
     return false;
