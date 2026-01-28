@@ -1,34 +1,27 @@
 import { notFound } from 'next/navigation';
-import { getPaste, updatePaste } from '@/lib/kv';
+import { getPaste, updatePaste } from '@/lib/kv'; // your Upstash Redis wrapper
 import {
   getCurrentTime,
   isPasteAvailable,
   getExpiryTimestamp,
-  getRemainingViews
+  getRemainingViews,
 } from '@/lib/utils';
 
-async function getPasteData(id: string) {
-  const paste = await getPaste(id);
+export default async function PastePage({ params }: { params: { id: string } }) {
+  const paste = await getPaste(params.id);
 
-  if (!paste) return null;
-
-  const currentTime = getCurrentTime();
-  if (!isPasteAvailable(paste, currentTime)) return null;
+  if (!paste || !isPasteAvailable(paste, getCurrentTime())) {
+    notFound(); // safe fallback
+  }
 
   paste.view_count += 1;
   await updatePaste(paste);
 
-  return {
+  const data = {
     content: paste.content,
     remaining_views: getRemainingViews(paste),
     expires_at: getExpiryTimestamp(paste),
   };
-}
-
-export default async function PastePage({ params }: { params: { id: string } }) {
-  const data = await getPasteData(params.id);
-
-  if (!data) notFound();
 
   return (
     <main className="p-6 bg-gray-100 min-h-screen">
@@ -40,20 +33,14 @@ export default async function PastePage({ params }: { params: { id: string } }) 
 
         {(data.remaining_views !== null || data.expires_at !== null) && (
           <div className="p-4 text-sm text-gray-600 bg-gray-50 border-b">
-            {data.remaining_views !== null && (
-              <span>Remaining views: {data.remaining_views} </span>
-            )}
+            {data.remaining_views !== null && <span>Remaining views: {data.remaining_views}</span>}
             {data.expires_at !== null && (
-              <span>
-                Expires at: {new Date(data.expires_at).toLocaleString()}
-              </span>
+              <span>Expires at: {new Date(data.expires_at).toLocaleString()}</span>
             )}
           </div>
         )}
 
-        <pre className="p-6 whitespace-pre-wrap font-mono text-sm">
-          {data.content}
-        </pre>
+        <pre className="p-6 whitespace-pre-wrap font-mono text-sm">{data.content}</pre>
 
         <div className="p-4 text-center text-sm border-t">
           <a href="/" className="text-blue-600 hover:underline">
