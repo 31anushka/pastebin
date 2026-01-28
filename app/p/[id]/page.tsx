@@ -1,18 +1,11 @@
 import { notFound } from 'next/navigation';
-import { getPaste, updatePaste } from '@/lib/kv'; // your Upstash Redis wrapper
-import {
-  getCurrentTime,
-  isPasteAvailable,
-  getExpiryTimestamp,
-  getRemainingViews,
-} from '@/lib/utils';
+import { getPaste, updatePaste } from '@/lib/kv';
+import { getCurrentTime, isPasteAvailable, getExpiryTimestamp, getRemainingViews } from '@/lib/utils';
 
 export default async function PastePage({ params }: { params: { id: string } }) {
   const paste = await getPaste(params.id);
 
-  if (!paste || !isPasteAvailable(paste, getCurrentTime())) {
-    notFound(); // safe fallback
-  }
+  if (!paste || !isPasteAvailable(paste, getCurrentTime())) notFound();
 
   paste.view_count += 1;
   await updatePaste(paste);
@@ -43,9 +36,7 @@ export default async function PastePage({ params }: { params: { id: string } }) 
         <pre className="p-6 whitespace-pre-wrap font-mono text-sm">{data.content}</pre>
 
         <div className="p-4 text-center text-sm border-t">
-          <a href="/" className="text-blue-600 hover:underline">
-            Create a new paste
-          </a>
+          <a href="/" className="text-blue-600 hover:underline">Create a new paste</a>
         </div>
       </div>
     </main>
