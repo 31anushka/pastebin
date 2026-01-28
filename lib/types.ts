@@ -1,20 +1,14 @@
-// export interface Paste {
-//   id: string;
-//   content: string;
-//   created_at: number;
-//   ttl_seconds?: number;
-//   max_views?: number;
-//   view_count: number;
-// }
+
+
+
 export interface Paste {
   id: string;
   content: string;
   created_at: number;
+  ttl_seconds?: number;
+  max_views?: number;
   view_count: number;
-  ttl_seconds?: number | null;
-  max_views?: number | null;
 }
-
 
 export interface CreatePasteRequest {
   content: string;

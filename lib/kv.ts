@@ -58,6 +58,7 @@
 //     return false;
 //   }
 // }
+// // 
 
 import { Redis } from '@upstash/redis';
 import { Paste } from './types';
@@ -74,6 +75,7 @@ export async function savePaste(paste: Paste): Promise<void> {
   const key = `${PASTE_PREFIX}${paste.id}`;
   
   // If TTL is set, use Redis SETEX for automatic expiry
+  // Upstash handles JSON serialization automatically
   if (paste.ttl_seconds) {
     await redis.setex(key, paste.ttl_seconds, paste);
   } else {
@@ -89,6 +91,7 @@ export async function getPaste(id: string): Promise<Paste | null> {
     return null;
   }
   
+  // Upstash automatically deserializes, return directly
   return data;
 }
 
