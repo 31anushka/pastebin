@@ -12,6 +12,7 @@ export interface Paste {
   created_at: number;
   view_count: number;
   ttl_seconds?: number | null;
+  max_views?: number | null;
 }
 
 

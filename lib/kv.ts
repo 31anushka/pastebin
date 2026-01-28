@@ -43,12 +43,14 @@ export async function getPaste(id: string): Promise<Paste | null> {
 
   if (!data) return null;
 
-  // If data is already an object (Upstash REST sometimes returns object), return it
-  if (typeof data === 'object') return data as Paste;
-
-  // Otherwise parse JSON string
-  return JSON.parse(data as string) as Paste;
+  try {
+    return typeof data === 'object' ? data as Paste : JSON.parse(data as string) as Paste;
+  } catch (err) {
+    console.error('Error parsing paste JSON', data, err);
+    return null;
+  }
 }
+
 
 /**
  * Update a paste (e.g., increment view count)
