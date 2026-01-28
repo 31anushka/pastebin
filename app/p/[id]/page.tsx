@@ -5,10 +5,22 @@ import { getCurrentTime, isPasteAvailable, getExpiryTimestamp, getRemainingViews
 export default async function PastePage({ params }: { params: { id: string } }) {
   const paste = await getPaste(params.id);
 
-  if (!paste || !isPasteAvailable(paste, getCurrentTime())) notFound();
+if (!paste || !isPasteAvailable(paste, getCurrentTime())) {
+  notFound(); // fallback to 404
+}
 
-  paste.view_count += 1;
+paste.view_count = (paste.view_count || 0) + 1;
+try {
   await updatePaste(paste);
+} catch (err) {
+  console.error('Failed to update paste:', err);
+}
+
+
+  // if (!paste || !isPasteAvailable(paste, getCurrentTime())) notFound();
+
+  // paste.view_count += 1;
+  // await updatePaste(paste);
 
   const data = {
     content: paste.content,
