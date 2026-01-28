@@ -1,73 +1,9 @@
-// import { Redis } from '@upstash/redis';
-// import { Paste } from './types';
-
-// const PASTE_PREFIX = 'paste:';
-
-// // Initialize Upstash Redis client
-// const redis = new Redis({
-//   url: process.env.UPSTASH_REDIS_REST_URL!,
-//   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-// });
-
-// export async function savePaste(paste: Paste): Promise<void> {
-//   const key = `${PASTE_PREFIX}${paste.id}`;
-  
-//   // If TTL is set, use Redis SETEX for automatic expiry
-//   if (paste.ttl_seconds) {
-//     await redis.setex(key, paste.ttl_seconds, JSON.stringify(paste));
-//   } else {
-//     await redis.set(key, JSON.stringify(paste));
-//   }
-// }
-
-// export async function getPaste(id: string): Promise<Paste | null> {
-//   const key = `${PASTE_PREFIX}${id}`;
-//   const data = await redis.get(key);
-  
-//   if (!data) {
-//     return null;
-//   }
-  
-//   return JSON.parse(data as string) as Paste;
-// }
-
-// export async function updatePaste(paste: Paste): Promise<void> {
-//   const key = `${PASTE_PREFIX}${paste.id}`;
-  
-//   // Calculate remaining TTL if it exists
-//   if (paste.ttl_seconds) {
-//     const elapsed = Math.floor((Date.now() - paste.created_at) / 1000);
-//     const remainingTtl = paste.ttl_seconds - elapsed;
-    
-//     if (remainingTtl > 0) {
-//       await redis.setex(key, remainingTtl, JSON.stringify(paste));
-//     } else {
-//       // Already expired, delete it
-//       await redis.del(key);
-//     }
-//   } else {
-//     await redis.set(key, JSON.stringify(paste));
-//   }
-// }
-
-// export async function healthCheck(): Promise<boolean> {
-//   try {
-//     // Try a simple ping operation
-//     const result = await redis.ping();
-//     return result === 'PONG';
-//   } catch (error) {
-//     console.error('Redis health check failed:', error);
-//     return false;
-//   }
-// }
-
-
 import { Redis } from '@upstash/redis';
 import { Paste } from './types';
 
-// const PASTE_PREFIX = 'paste:';
 const PASTE_PREFIX = 'paste:';
 
+// ✅ Fail fast if environment variables are missing
 if (!process.env.UPSTASH_REDIS_REST_URL) {
   throw new Error('Missing UPSTASH_REDIS_REST_URL');
 }
@@ -75,64 +11,75 @@ if (!process.env.UPSTASH_REDIS_REST_TOKEN) {
   throw new Error('Missing UPSTASH_REDIS_REST_TOKEN');
 }
 
+// ✅ Initialize Upstash Redis client
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
+/**
+ * Save a paste to Redis
+ */
 export async function savePaste(paste: Paste): Promise<void> {
   const key = `${PASTE_PREFIX}${paste.id}`;
-  
-  // If TTL is set, use Redis SETEX for automatic expiry
+
+  const value = JSON.stringify(paste);
+
   if (paste.ttl_seconds) {
-    await redis.setex(key, paste.ttl_seconds, JSON.stringify(paste));
+    // Redis SETEX automatically expires key
+    await redis.setex(key, paste.ttl_seconds, value);
   } else {
-    await redis.set(key, JSON.stringify(paste));
+    await redis.set(key, value);
   }
 }
 
+/**
+ * Get a paste from Redis
+ * ✅ Handles both string and object returns safely
+ */
 export async function getPaste(id: string): Promise<Paste | null> {
   const key = `${PASTE_PREFIX}${id}`;
   const data = await redis.get(key);
-  
-  if (!data) {
-    return null;
-  }
-  
+
+  if (!data) return null;
+
+  // If data is already an object (Upstash REST sometimes returns object), return it
+  if (typeof data === 'object') return data as Paste;
+
+  // Otherwise parse JSON string
   return JSON.parse(data as string) as Paste;
 }
 
+/**
+ * Update a paste (e.g., increment view count)
+ */
 export async function updatePaste(paste: Paste): Promise<void> {
   const key = `${PASTE_PREFIX}${paste.id}`;
-  
-  // Calculate remaining TTL if it exists
+
+  const value = JSON.stringify(paste);
+
   if (paste.ttl_seconds) {
+    // Calculate remaining TTL
     const elapsed = Math.floor((Date.now() - paste.created_at) / 1000);
     const remainingTtl = paste.ttl_seconds - elapsed;
-    
+
     if (remainingTtl > 0) {
-      await redis.setex(key, remainingTtl, JSON.stringify(paste));
+      await redis.setex(key, remainingTtl, value);
     } else {
-      // Already expired, delete it
+      // Already expired, delete key
       await redis.del(key);
     }
   } else {
-    await redis.set(key, JSON.stringify(paste));
+    await redis.set(key, value);
   }
 }
 
-// export async function healthCheck(): Promise<boolean> {
-//   try {
-//     // Try a simple ping operation
-//     const result = await redis.ping();
-//     return result === 'PONG';
-//   } catch (error) {
-//     console.error('Redis health check failed:', error);
-//     return false;
-//   }
-// }
+/**
+ * Simple Redis health check (production-safe for REST API)
+ */
 export async function healthCheck(): Promise<boolean> {
   try {
+    // Use a temporary key with short TTL
     await redis.set('__healthcheck', 'ok', { ex: 5 });
     return true;
   } catch (error) {
