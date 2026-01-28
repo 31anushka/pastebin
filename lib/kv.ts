@@ -64,11 +64,17 @@ import { Redis } from '@upstash/redis';
 import { Paste } from './types';
 
 const PASTE_PREFIX = 'paste:';
-
+console.log(
+  "Redis env loaded:",
+  !!process.env.UPSTASH_REDIS_REST_URL,
+  !!process.env.UPSTASH_REDIS_REST_TOKEN
+);
 // Initialize Upstash Redis client with explicit env vars
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+// import { Redis } from "@upstash/redis";
+
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
 export async function savePaste(paste: Paste): Promise<void> {
