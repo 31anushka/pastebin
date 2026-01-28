@@ -17,11 +17,6 @@ try {
 }
 
 
-  // if (!paste || !isPasteAvailable(paste, getCurrentTime())) notFound();
-
-  // paste.view_count += 1;
-  // await updatePaste(paste);
-
   const data = {
     content: paste.content,
     remaining_views: getRemainingViews(paste),
