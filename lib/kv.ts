@@ -43,13 +43,20 @@ export async function getPaste(id: string): Promise<Paste | null> {
 
   if (!data) return null;
 
-  try {
-    return typeof data === 'object' ? data as Paste : JSON.parse(data as string) as Paste;
-  } catch (err) {
-    console.error('Error parsing paste JSON', data, err);
-    return null;
+  // ✅ Only parse if it's a string
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data) as Paste;
+    } catch (err) {
+      console.error('Failed to parse paste JSON:', data, err);
+      return null;
+    }
   }
+
+  // Already an object (Upstash REST can return object)
+  return data as Paste;
 }
+
 
 
 /**
@@ -57,24 +64,22 @@ export async function getPaste(id: string): Promise<Paste | null> {
  */
 export async function updatePaste(paste: Paste): Promise<void> {
   const key = `${PASTE_PREFIX}${paste.id}`;
-
   const value = JSON.stringify(paste);
 
   if (paste.ttl_seconds) {
-    // Calculate remaining TTL
     const elapsed = Math.floor((Date.now() - paste.created_at) / 1000);
     const remainingTtl = paste.ttl_seconds - elapsed;
 
     if (remainingTtl > 0) {
       await redis.setex(key, remainingTtl, value);
     } else {
-      // Already expired, delete key
-      await redis.del(key);
+      await redis.del(key); // expired
     }
   } else {
     await redis.set(key, value);
   }
 }
+
 
 /**
  * Simple Redis health check (production-safe for REST API)
